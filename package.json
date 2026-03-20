@@ -1,0 +1,17 @@
+{
+  "name": "freelance-dapp",
+  "version": "1.0.0",
+  "description": "Decentralized Freelancing Platform",
+  "scripts": {
+    "start": "cd src && npx serve -s . -l 3000",
+    "compile": "truffle compile",
+    "migrate": "truffle migrate --network development",
+    "test": "truffle test"
+  },
+  "dependencies": {
+    "web3": "^1.10.0"
+  },
+  "devDependencies": {
+    "truffle": "^5.11.0"
+  }
+}
