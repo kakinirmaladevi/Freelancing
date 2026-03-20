@@ -1,0 +1,385 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8" />
+  <meta name="viewport" content="width=device-width, initial-scale=1.0"/>
+  <title>ChainWork — Decentralized Freelancing</title>
+  <link rel="preconnect" href="https://fonts.googleapis.com">
+  <link href="https://fonts.googleapis.com/css2?family=Space+Grotesk:wght@300;400;500;600;700&family=JetBrains+Mono:wght@400;500&display=swap" rel="stylesheet">
+  <script src="https://cdn.jsdelivr.net/npm/web3@1.10.0/dist/web3.min.js"></script>
+  <style>
+    :root {
+      --bg: #0a0a0f; --bg2: #111118; --bg3: #1a1a24;
+      --border: rgba(255,255,255,0.08); --border-hover: rgba(255,255,255,0.16);
+      --accent: #7c6fff; --accent2: #ff6b9d; --accent3: #00d4aa;
+      --text: #f0f0f8; --muted: #7070a0; --card: #13131e;
+      --success: #00d4aa; --warning: #ffb347; --danger: #ff6b6b;
+    }
+    * { margin: 0; padding: 0; box-sizing: border-box; }
+    body { font-family: 'Space Grotesk', sans-serif; background: var(--bg); color: var(--text); min-height: 100vh; overflow-x: hidden; }
+    body::before { content: ''; position: fixed; top: 0; left: 0; right: 0; bottom: 0; background: radial-gradient(ellipse at 20% 20%, rgba(124,111,255,0.08) 0%, transparent 60%), radial-gradient(ellipse at 80% 80%, rgba(255,107,157,0.06) 0%, transparent 60%); pointer-events: none; z-index: 0; }
+    nav { position: sticky; top: 0; z-index: 100; background: rgba(10,10,15,0.85); backdrop-filter: blur(20px); border-bottom: 1px solid var(--border); padding: 0 2rem; display: flex; align-items: center; justify-content: space-between; height: 64px; }
+    .logo { display: flex; align-items: center; gap: 10px; font-size: 1.2rem; font-weight: 700; letter-spacing: -0.5px; }
+    .logo-icon { width: 32px; height: 32px; background: linear-gradient(135deg, var(--accent), var(--accent2)); border-radius: 8px; display: flex; align-items: center; justify-content: center; font-size: 16px; }
+    .nav-tabs { display: flex; gap: 4px; }
+    .nav-tab { padding: 6px 16px; border-radius: 8px; cursor: pointer; font-size: 0.875rem; font-weight: 500; color: var(--muted); transition: all 0.2s; border: none; background: transparent; }
+    .nav-tab:hover { color: var(--text); background: var(--bg3); }
+    .nav-tab.active { color: var(--text); background: var(--bg3); }
+    .wallet-btn { display: flex; align-items: center; gap: 8px; padding: 8px 16px; border-radius: 10px; cursor: pointer; font-size: 0.875rem; font-weight: 600; background: linear-gradient(135deg, var(--accent), #9b8fff); color: white; border: none; transition: all 0.2s; }
+    .wallet-btn:hover { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,111,255,0.4); }
+    .wallet-connected { background: var(--bg3); border: 1px solid var(--border); color: var(--accent3); font-family: 'JetBrains Mono', monospace; font-size: 0.75rem; }
+    main { position: relative; z-index: 1; max-width: 1100px; margin: 0 auto; padding: 2rem; }
+    .hero { text-align: center; padding: 4rem 0 3rem; }
+    .hero-badge { display: inline-flex; align-items: center; gap: 6px; padding: 6px 14px; border-radius: 100px; border: 1px solid rgba(124,111,255,0.3); background: rgba(124,111,255,0.08); font-size: 0.75rem; font-weight: 500; color: var(--accent); margin-bottom: 1.5rem; }
+    .hero h1 { font-size: clamp(2rem, 5vw, 3.5rem); font-weight: 700; line-height: 1.1; letter-spacing: -1.5px; margin-bottom: 1rem; }
+    .hero h1 span { background: linear-gradient(135deg, var(--accent), var(--accent2)); -webkit-background-clip: text; -webkit-text-fill-color: transparent; }
+    .hero p { color: var(--muted); font-size: 1.1rem; max-width: 500px; margin: 0 auto 2rem; line-height: 1.6; }
+    .stats { display: flex; justify-content: center; gap: 3rem; margin-top: 2rem; }
+    .stat { text-align: center; }
+    .stat-value { font-size: 1.5rem; font-weight: 700; color: var(--accent); }
+    .stat-label { font-size: 0.75rem; color: var(--muted); margin-top: 2px; }
+    .section { display: none; }
+    .section.active { display: block; }
+    .alert { padding: 12px 16px; border-radius: 10px; margin-bottom: 1rem; font-size: 0.875rem; display: none; align-items: center; gap: 8px; }
+    .alert.show { display: flex; }
+    .alert-success { background: rgba(0,212,170,0.1); border: 1px solid rgba(0,212,170,0.3); color: var(--success); }
+    .alert-error { background: rgba(255,107,107,0.1); border: 1px solid rgba(255,107,107,0.3); color: var(--danger); }
+    .alert-info { background: rgba(124,111,255,0.1); border: 1px solid rgba(124,111,255,0.3); color: var(--accent); }
+    .card { background: var(--card); border: 1px solid var(--border); border-radius: 16px; padding: 1.5rem; transition: all 0.2s; }
+    .card:hover { border-color: var(--border-hover); }
+    .card-header { display: flex; justify-content: space-between; align-items: flex-start; margin-bottom: 1rem; }
+    .card-title { font-size: 1rem; font-weight: 600; }
+    .card-desc { font-size: 0.875rem; color: var(--muted); line-height: 1.5; margin-bottom: 1rem; }
+    .badge { display: inline-flex; align-items: center; gap: 4px; padding: 3px 10px; border-radius: 100px; font-size: 0.7rem; font-weight: 600; text-transform: uppercase; letter-spacing: 0.5px; }
+    .badge-open { background: rgba(124,111,255,0.15); color: var(--accent); }
+    .badge-progress { background: rgba(255,179,71,0.15); color: var(--warning); }
+    .badge-submitted { background: rgba(0,212,170,0.15); color: var(--accent3); }
+    .badge-completed { background: rgba(0,212,170,0.15); color: var(--accent3); }
+    .badge-disputed { background: rgba(255,107,107,0.15); color: var(--danger); }
+    .badge-refunded { background: rgba(112,112,160,0.15); color: var(--muted); }
+    .badge-cancelled { background: rgba(112,112,160,0.15); color: var(--muted); }
+    .jobs-grid { display: grid; grid-template-columns: repeat(auto-fill, minmax(320px, 1fr)); gap: 1rem; }
+    .form-group { margin-bottom: 1.25rem; }
+    label { display: block; font-size: 0.8rem; font-weight: 600; color: var(--muted); margin-bottom: 6px; letter-spacing: 0.5px; text-transform: uppercase; }
+    input, textarea { width: 100%; padding: 12px 14px; background: var(--bg3); border: 1px solid var(--border); border-radius: 10px; color: var(--text); font-family: 'Space Grotesk', sans-serif; font-size: 0.9rem; transition: all 0.2s; resize: vertical; }
+    input:focus, textarea:focus { outline: none; border-color: var(--accent); box-shadow: 0 0 0 3px rgba(124,111,255,0.15); }
+    input::placeholder, textarea::placeholder { color: var(--muted); }
+    .btn { padding: 10px 20px; border-radius: 10px; cursor: pointer; font-family: 'Space Grotesk', sans-serif; font-size: 0.875rem; font-weight: 600; border: none; transition: all 0.2s; display: inline-flex; align-items: center; gap: 6px; }
+    .btn:disabled { opacity: 0.5; cursor: not-allowed; }
+    .btn-primary { background: linear-gradient(135deg, var(--accent), #9b8fff); color: white; }
+    .btn-primary:hover:not(:disabled) { transform: translateY(-1px); box-shadow: 0 4px 20px rgba(124,111,255,0.35); }
+    .btn-success { background: rgba(0,212,170,0.15); color: var(--success); border: 1px solid rgba(0,212,170,0.3); }
+    .btn-success:hover:not(:disabled) { background: rgba(0,212,170,0.25); }
+    .btn-danger { background: rgba(255,107,107,0.15); color: var(--danger); border: 1px solid rgba(255,107,107,0.3); }
+    .btn-danger:hover:not(:disabled) { background: rgba(255,107,107,0.25); }
+    .btn-outline { background: transparent; color: var(--text); border: 1px solid var(--border); }
+    .btn-outline:hover:not(:disabled) { border-color: var(--border-hover); background: var(--bg3); }
+    .btn-sm { padding: 6px 14px; font-size: 0.8rem; border-radius: 8px; }
+    .btn-full { width: 100%; justify-content: center; }
+    .job-meta { display: flex; gap: 1rem; margin-bottom: 1rem; flex-wrap: wrap; }
+    .job-meta-item { display: flex; align-items: center; gap: 5px; font-size: 0.78rem; color: var(--muted); }
+    .budget-tag { font-family: 'JetBrains Mono', monospace; font-size: 0.85rem; font-weight: 500; color: var(--accent3); }
+    .address-short { font-family: 'JetBrains Mono', monospace; font-size: 0.72rem; color: var(--muted); }
+    .btn-group { display: flex; gap: 8px; flex-wrap: wrap; }
+    .proof-box { background: var(--bg3); border: 1px solid var(--border); border-radius: 8px; padding: 10px 12px; font-family: 'JetBrains Mono', monospace; font-size: 0.78rem; color: var(--accent3); word-break: break-all; margin-top: 8px; }
+    .form-card { max-width: 600px; margin: 0 auto; }
+    .section-title { font-size: 1.5rem; font-weight: 700; margin-bottom: 0.5rem; letter-spacing: -0.5px; }
+    .section-sub { color: var(--muted); margin-bottom: 2rem; font-size: 0.9rem; }
+    .empty { text-align: center; padding: 4rem 2rem; }
+    .empty-icon { font-size: 3rem; margin-bottom: 1rem; }
+    .empty-text { color: var(--muted); font-size: 0.9rem; }
+    .spinner { width: 16px; height: 16px; border: 2px solid rgba(255,255,255,0.2); border-top-color: white; border-radius: 50%; animation: spin 0.7s linear infinite; display: inline-block; }
+    @keyframes spin { to { transform: rotate(360deg); } }
+    .steps { display: grid; grid-template-columns: repeat(auto-fit, minmax(200px, 1fr)); gap: 1rem; margin: 2rem 0; }
+    .step-card { background: var(--card); border: 1px solid var(--border); border-radius: 14px; padding: 1.5rem; text-align: center; }
+    .step-num { width: 40px; height: 40px; border-radius: 10px; margin: 0 auto 1rem; display: flex; align-items: center; justify-content: center; font-weight: 700; font-size: 1rem; background: linear-gradient(135deg, var(--accent), var(--accent2)); }
+    .step-title { font-weight: 600; margin-bottom: 0.4rem; font-size: 0.9rem; }
+    .step-desc { font-size: 0.8rem; color: var(--muted); line-height: 1.5; }
+    @media (max-width: 600px) { nav { padding: 0 1rem; } main { padding: 1rem; } .nav-tabs { display: none; } .stats { gap: 1.5rem; } }
+  </style>
+</head>
+<body>
+<nav>
+  <div class="logo"><div class="logo-icon">⛓</div>ChainWork</div>
+  <div class="nav-tabs">
+    <button class="nav-tab active" onclick="showSection('home')">Home</button>
+    <button class="nav-tab" onclick="showSection('jobs')">Browse Jobs</button>
+    <button class="nav-tab" onclick="showSection('post')">Post a Job</button>
+    <button class="nav-tab" onclick="showSection('my')">My Jobs</button>
+  </div>
+  <button class="wallet-btn" id="walletBtn" onclick="connectWallet()">🦊 Connect Wallet</button>
+</nav>
+<main>
+  <section class="section active" id="section-home">
+    <div class="hero">
+      <div class="hero-badge">⛓ Powered by Ethereum Blockchain</div>
+      <h1>Freelancing with<br/><span>zero middlemen</span></h1>
+      <p>Post jobs, get hired, and receive payments — all secured by smart contracts on the blockchain.</p>
+      <button class="btn btn-primary" onclick="showSection('jobs')" style="margin-right:8px">Browse Jobs →</button>
+      <button class="btn btn-outline" onclick="showSection('post')">Post a Job</button>
+      <div class="stats">
+        <div class="stat"><div class="stat-value" id="totalJobs">0</div><div class="stat-label">Jobs Posted</div></div>
+        <div class="stat"><div class="stat-value">0%</div><div class="stat-label">Platform Fee</div></div>
+        <div class="stat"><div class="stat-value">ETH</div><div class="stat-label">Currency</div></div>
+      </div>
+    </div>
+    <div class="steps">
+      <div class="step-card"><div class="step-num">1</div><div class="step-title">Post a Job</div><div class="step-desc">Describe your project and lock your ETH payment in the smart contract.</div></div>
+      <div class="step-card"><div class="step-num">2</div><div class="step-title">Get Hired</div><div class="step-desc">A freelancer accepts your job and starts working on it.</div></div>
+      <div class="step-card"><div class="step-num">3</div><div class="step-title">Review Work</div><div class="step-desc">Freelancer submits proof. You review and approve or raise a dispute.</div></div>
+      <div class="step-card"><div class="step-num">4</div><div class="step-title">Auto Payment</div><div class="step-desc">On approval, ETH is instantly released to the freelancer. No delays.</div></div>
+    </div>
+  </section>
+  <section class="section" id="section-jobs">
+    <div style="display:flex;justify-content:space-between;align-items:center;margin-bottom:1.5rem;">
+      <div><div class="section-title">Browse Jobs</div><div class="section-sub">Find work and get paid in ETH</div></div>
+      <button class="btn btn-outline btn-sm" onclick="loadJobs()">↻ Refresh</button>
+    </div>
+    <div id="jobsAlert"></div>
+    <div class="jobs-grid" id="jobsList"><div class="empty"><div class="empty-icon">🔍</div><div class="empty-text">Loading jobs...</div></div></div>
+  </section>
+  <section class="section" id="section-post">
+    <div class="form-card">
+      <div class="section-title">Post a Job</div>
+      <div class="section-sub">Your payment will be locked in the smart contract until work is approved.</div>
+      <div id="postAlert"></div>
+      <div class="card">
+        <div class="form-group"><label>Job Title</label><input type="text" id="jobTitle" placeholder="e.g. Build a React landing page" /></div>
+        <div class="form-group"><label>Description</label><textarea id="jobDesc" rows="4" placeholder="Describe what you need in detail..."></textarea></div>
+        <div class="form-group"><label>Budget (ETH)</label><input type="number" id="jobBudget" placeholder="0.05" step="0.01" min="0.001" /></div>
+        <button class="btn btn-primary btn-full" id="postBtn" onclick="postJob()">🔒 Lock Payment & Post Job</button>
+      </div>
+    </div>
+  </section>
+  <section class="section" id="section-my">
+    <div class="section-title">My Jobs</div>
+    <div class="section-sub">Jobs you've posted or accepted</div>
+    <div id="myAlert"></div>
+    <div class="jobs-grid" id="myJobsList"><div class="empty"><div class="empty-icon">📋</div><div class="empty-text">Connect your wallet to see your jobs.</div></div></div>
+  </section>
+</main>
+<div id="submitModal" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,0.7);z-index:200;align-items:center;justify-content:center">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:16px;padding:2rem;width:90%;max-width:480px">
+    <h3 style="margin-bottom:1rem">Submit Work</h3>
+    <input type="hidden" id="submitJobId" />
+    <div class="form-group"><label>Work Proof / Link</label><input type="text" id="workProof" placeholder="https://github.com/your-project or any link" /></div>
+    <div style="display:flex;gap:8px">
+      <button class="btn btn-primary" onclick="submitWork()">Submit</button>
+      <button class="btn btn-outline" onclick="closeModal()">Cancel</button>
+    </div>
+  </div>
+</div>
+<script>
+  const CONTRACT_ADDRESS = "0xF74EfDbfFe84729b786555c97525507BcF6b8d4B";
+  const ABI = [
+    {"inputs":[{"internalType":"string","name":"_title","type":"string"},{"internalType":"string","name":"_description","type":"string"}],"name":"postJob","outputs":[],"stateMutability":"payable","type":"function"},
+    {"inputs":[{"internalType":"uint256","name":"_jobId","type":"uint256"}],"name":"cancelJob","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint256","name":"_jobId","type":"uint256"}],"name":"acceptJob","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint256","name":"_jobId","type":"uint256"},{"internalType":"string","name":"_proof","type":"string"}],"name":"submitWork","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint256","name":"_jobId","type":"uint256"}],"name":"approveWork","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint256","name":"_jobId","type":"uint256"}],"name":"raiseDispute","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[{"internalType":"uint256","name":"_jobId","type":"uint256"}],"name":"refundClient","outputs":[],"stateMutability":"nonpayable","type":"function"},
+    {"inputs":[],"name":"getAllJobs","outputs":[{"components":[{"internalType":"uint256","name":"id","type":"uint256"},{"internalType":"address payable","name":"client","type":"address"},{"internalType":"address payable","name":"freelancer","type":"address"},{"internalType":"string","name":"title","type":"string"},{"internalType":"string","name":"description","type":"string"},{"internalType":"uint256","name":"budget","type":"uint256"},{"internalType":"uint8","name":"status","type":"uint8"},{"internalType":"string","name":"workProof","type":"string"},{"internalType":"uint256","name":"createdAt","type":"uint256"}],"internalType":"struct Freelance.Job[]","name":"","type":"tuple[]"}],"stateMutability":"view","type":"function"},
+    {"inputs":[],"name":"jobCount","outputs":[{"internalType":"uint256","name":"","type":"uint256"}],"stateMutability":"view","type":"function"}
+  ];
+
+  let web3, contract, account;
+  const STATUS = ["Open","In Progress","Submitted","Completed","Disputed","Refunded","Cancelled"];
+  const STATUS_CLASS = ["badge-open","badge-progress","badge-submitted","badge-completed","badge-disputed","badge-refunded","badge-cancelled"];
+
+  async function connectWallet() {
+    if (!window.ethereum) { alert("Please install MetaMask!"); return; }
+    try {
+      const accounts = await window.ethereum.request({ method: 'eth_requestAccounts' });
+      account = accounts[0];
+      web3 = new Web3(window.ethereum);
+      contract = new web3.eth.Contract(ABI, CONTRACT_ADDRESS);
+      const btn = document.getElementById('walletBtn');
+      btn.textContent = account.slice(0,6) + '...' + account.slice(-4);
+      btn.classList.add('wallet-connected');
+      loadJobs(); loadMyJobs();
+      window.ethereum.on('accountsChanged', a => { account = a[0]; btn.textContent = a[0].slice(0,6)+'...'+a[0].slice(-4); loadJobs(); loadMyJobs(); });
+    } catch(e) { console.error(e); }
+  }
+
+  function showSection(name) {
+    document.querySelectorAll('.section').forEach(s => s.classList.remove('active'));
+    document.querySelectorAll('.nav-tab').forEach(t => t.classList.remove('active'));
+    document.getElementById('section-' + name).classList.add('active');
+    const tabs = ['home','jobs','post','my'];
+    document.querySelectorAll('.nav-tab')[tabs.indexOf(name)].classList.add('active');
+    if (name === 'jobs') loadJobs();
+    if (name === 'my') loadMyJobs();
+  }
+
+  function shortAddr(a) { return a.slice(0,6)+'...'+a.slice(-4); }
+  function weiToEth(w) { return parseFloat(Web3.utils.fromWei(w, 'ether')).toFixed(4); }
+  function timeAgo(ts) {
+    const diff = Date.now()/1000 - parseInt(ts);
+    if (diff < 3600) return Math.floor(diff/60) + 'm ago';
+    if (diff < 86400) return Math.floor(diff/3600) + 'h ago';
+    return Math.floor(diff/86400) + 'd ago';
+  }
+  function showAlert(id, msg, type='info') {
+    const el = document.getElementById(id);
+    el.innerHTML = `<div class="alert alert-${type} show">${msg}</div>`;
+    setTimeout(() => { el.innerHTML=''; }, 5000);
+  }
+
+  async function loadJobs() {
+    if (!contract) return;
+    try {
+      const jobs = await contract.methods.getAllJobs().call();
+      document.getElementById('totalJobs').textContent = jobs.length;
+      const open = jobs.filter(j => j.status == 0);
+      renderJobs('jobsList', open, false);
+    } catch(e) { console.error(e); }
+  }
+
+  async function loadMyJobs() {
+    if (!contract || !account) {
+      document.getElementById('myJobsList').innerHTML = '<div class="empty"><div class="empty-icon">🔗</div><div class="empty-text">Connect your wallet first.</div></div>';
+      return;
+    }
+    try {
+      const jobs = await contract.methods.getAllJobs().call();
+      const mine = jobs.filter(j => j.client.toLowerCase() === account.toLowerCase() || j.freelancer.toLowerCase() === account.toLowerCase());
+      renderJobs('myJobsList', mine, true);
+    } catch(e) { console.error(e); }
+  }
+
+  function renderJobs(containerId, jobs, showActions) {
+    const el = document.getElementById(containerId);
+    if (!jobs.length) { el.innerHTML = '<div class="empty"><div class="empty-icon">📭</div><div class="empty-text">No jobs found.</div></div>'; return; }
+    el.innerHTML = jobs.map(j => jobCard(j, showActions)).join('');
+  }
+
+  function jobCard(j, showActions) {
+    const isClient = account && j.client.toLowerCase() === account.toLowerCase();
+    const isFreelancer = account && j.freelancer.toLowerCase() === account.toLowerCase();
+    const status = parseInt(j.status);
+    let actions = '';
+    if (showActions) {
+      if (status === 0 && isClient) actions += `<button class="btn btn-danger btn-sm" onclick="cancelJob(${j.id})">✕ Cancel & Refund</button>`;
+      if (status === 0 && !isClient) actions += `<button class="btn btn-primary btn-sm" onclick="acceptJob(${j.id})">Accept Job</button>`;
+      if (status === 1 && isFreelancer) actions += `<button class="btn btn-success btn-sm" onclick="openSubmit(${j.id})">Submit Work</button>`;
+      if (status === 2 && isClient) {
+        actions += `<button class="btn btn-success btn-sm" onclick="approveWork(${j.id})">✓ Approve</button>`;
+        actions += `<button class="btn btn-danger btn-sm" onclick="raiseDispute(${j.id})">⚑ Dispute</button>`;
+      }
+      if (status === 4 && isClient) actions += `<button class="btn btn-danger btn-sm" onclick="refundClient(${j.id})">↩ Refund</button>`;
+    } else {
+      if (status === 0) actions += `<button class="btn btn-primary btn-sm" onclick="connectThenAccept(${j.id})">Accept Job</button>`;
+    }
+    return `
+    <div class="card">
+      <div class="card-header">
+        <span class="card-title">${j.title}</span>
+        <span class="badge ${STATUS_CLASS[status]}">${STATUS[status]}</span>
+      </div>
+      <p class="card-desc">${j.description}</p>
+      <div class="job-meta">
+        <span class="job-meta-item">💰 <span class="budget-tag">${weiToEth(j.budget)} ETH</span></span>
+        <span class="job-meta-item">👤 <span class="address-short">${shortAddr(j.client)}</span></span>
+        <span class="job-meta-item">🕐 ${timeAgo(j.createdAt)}</span>
+        ${j.freelancer !== '0x0000000000000000000000000000000000000000' ? `<span class="job-meta-item">🛠 <span class="address-short">${shortAddr(j.freelancer)}</span></span>` : ''}
+      </div>
+      ${j.workProof ? `<div class="proof-box">🔗 ${j.workProof}</div>` : ''}
+      ${actions ? `<div class="btn-group" style="margin-top:1rem">${actions}</div>` : ''}
+    </div>`;
+  }
+
+  async function postJob() {
+    if (!contract) { showAlert('postAlert','Please connect your wallet first.','error'); return; }
+    const title = document.getElementById('jobTitle').value.trim();
+    const desc = document.getElementById('jobDesc').value.trim();
+    const budget = document.getElementById('jobBudget').value;
+    if (!title || !desc || !budget) { showAlert('postAlert','Please fill in all fields.','error'); return; }
+    const btn = document.getElementById('postBtn');
+    btn.innerHTML = '<span class="spinner"></span> Posting...'; btn.disabled = true;
+    try {
+      const wei = Web3.utils.toWei(budget, 'ether');
+      await contract.methods.postJob(title, desc).send({ from: account, value: wei });
+      showAlert('postAlert','Job posted successfully! ETH locked in escrow.','success');
+      document.getElementById('jobTitle').value = '';
+      document.getElementById('jobDesc').value = '';
+      document.getElementById('jobBudget').value = '';
+      loadJobs(); loadMyJobs();
+    } catch(e) { showAlert('postAlert', e.message || 'Transaction failed.', 'error'); }
+    btn.innerHTML = '🔒 Lock Payment & Post Job'; btn.disabled = false;
+  }
+
+  async function cancelJob(jobId) {
+    try {
+      await contract.methods.cancelJob(jobId).send({ from: account });
+      showAlert('myAlert','Job cancelled! ETH refunded to your wallet.','success');
+      loadJobs(); loadMyJobs();
+    } catch(e) { showAlert('myAlert', e.message || 'Failed.', 'error'); }
+  }
+
+  async function acceptJob(jobId) {
+    if (!contract) { alert('Connect wallet first'); return; }
+    try {
+      await contract.methods.acceptJob(jobId).send({ from: account });
+      showAlert('jobsAlert','Job accepted! Get to work.','success');
+      loadJobs(); loadMyJobs();
+    } catch(e) { showAlert('jobsAlert', e.message || 'Failed.', 'error'); }
+  }
+
+  async function connectThenAccept(jobId) {
+    if (!account) await connectWallet();
+    if (account) acceptJob(jobId);
+  }
+
+  function openSubmit(jobId) {
+    document.getElementById('submitJobId').value = jobId;
+    document.getElementById('workProof').value = '';
+    document.getElementById('submitModal').style.display = 'flex';
+  }
+  function closeModal() { document.getElementById('submitModal').style.display = 'none'; }
+
+  async function submitWork() {
+    const jobId = document.getElementById('submitJobId').value;
+    const proof = document.getElementById('workProof').value.trim();
+    if (!proof) { alert('Please enter work proof.'); return; }
+    try {
+      await contract.methods.submitWork(jobId, proof).send({ from: account });
+      closeModal();
+      showAlert('myAlert','Work submitted! Waiting for client approval.','success');
+      loadMyJobs();
+    } catch(e) { alert(e.message || 'Failed.'); }
+  }
+
+  async function approveWork(jobId) {
+    try {
+      await contract.methods.approveWork(jobId).send({ from: account });
+      showAlert('myAlert','Work approved! Payment released to freelancer.','success');
+      loadMyJobs();
+    } catch(e) { showAlert('myAlert', e.message || 'Failed.', 'error'); }
+  }
+
+  async function raiseDispute(jobId) {
+    try {
+      await contract.methods.raiseDispute(jobId).send({ from: account });
+      showAlert('myAlert','Dispute raised.','info');
+      loadMyJobs();
+    } catch(e) { showAlert('myAlert', e.message || 'Failed.', 'error'); }
+  }
+
+  async function refundClient(jobId) {
+    try {
+      await contract.methods.refundClient(jobId).send({ from: account });
+      showAlert('myAlert','Refund processed! ETH returned to your wallet.','success');
+      loadMyJobs();
+    } catch(e) { showAlert('myAlert', e.message || 'Failed.', 'error'); }
+  }
+
+  window.addEventListener('load', async () => {
+    if (window.ethereum) {
+      const accounts = await window.ethereum.request({ method: 'eth_accounts' });
+      if (accounts.length) connectWallet();
+    }
+  });
+</script>
+</body>
+</html>s
